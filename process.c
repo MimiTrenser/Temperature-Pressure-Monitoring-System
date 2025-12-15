@@ -26,81 +26,36 @@ static void processPressureAction(int v)
     printf("processPressure: %d\n", v);
 }
 
-// Processing thread runs every 200ms
+#define SizeofProcessTable sizeof(process_table)/sizeof(ProcessConfig_t);
+PollingConfig_t process_table[SizeofProcessTable] = {{PARAM_TEMP,50,10,70,400,0},
+                                                     {PARAM_PRESSURE,400,100,5000,0}};
+
+// Processing thread runs every 400ms
 void* ProcessingThread(void *arg)
 {
     (void)arg;
-    static uint16_t tempViolationTime = 0;
-    static uint16_t pressureViolationTime = 0;
-    static char lastConfigVersion[STR_LEN] = {0};
-    uint8_t SamplingTime = 400;
 
     while (1)
     {
-        GlobalPolledValue_t tempdata = GetPolledValue(PARAM_TEMP);
-        char v = tempdata.Values.Value;
-
-        // normal processing 
-        processTempAction(tempdata.Values.Value);
-
-        if (v < tempdata.LowerThreshold || v > tempdata.UpperThreshold)
+        for(int i = 0;i < SizeofProcessTable ; i++)
+        {
+            int32_t Data = GetPolledValue(process_table[i].Param);
+            if(Data < process_table[i].mini_threshold || Data > process_table[i].mini_threshold)
             {
-                tempViolationTime += 200;
+                process_table[i].violationtime += process_table[i].processInterval_ms;//0,200,400
             }
-        else
+            else
             {
-                tempViolationTime = 0;
+                processPressureAction(Data);
+                process_table[i].violationtime = 0;
 
             }
-
-        if(tempViolationTime >= SamplingTime)
+            if(process_table[i].violationtime >= process_table[i].samplingtime)
             {
                 sendNotification_Temp(tempdata.Values.Value);
-                SetPolledValue(PARAM_TEMP, &tempdata);
-                tempViolationTime = 0;
+                process_table[i].violationtime = 0;
             }
-        
-
-        // ---------- Pressure ---------- 
-        GlobalPolledValue_t pressuredata = GetPolledValue(PARAM_PRESSURE);
-        char p = pressuredata.Values.Value;
-
-        // normal processing
-        processPressureAction(data.Values.Value);
-
-        if (p < pressuredata.LowerThreshold || p > pressuredata.UpperThreshold)
-            {
-                pressureViolationTime += 200;
-            }
-        else
-            {
-                pressureViolationTime = 0;
-
-            }
-            
-        if(pressureViolationTime >= SamplingTime)
-            {
-                sendNotification_Pressure(pressuredata.Values.Value);
-                SetPolledValue(PARAM_TEMP, &pressuredata);
-                pressureViolationTime = 0;
-            }
-
-        // ------------ Config Version ------------
-        GlobalPolledValue_t configdata = GetPolledValue(PARAM_CONFIG_VERSION);
-        if(strcmp(lastConfigVersion,configdata.Values.strValue) != 0)
-        {
-            char *configstr = (char *)malloc(strlen(configdata.Values.strValue)+1);//Dynamic memory allocation
-            if(configstr != NULL)
-            {
-            strcpy(configstr,configdata.Values.strValue);
-            printf("Config Version Changed\n");
-            free(configstr);
-            }
-            strcpy(lastConfigVersion,configdata.Values.strValue);
         }
-        
-        // processing interval: 200 ms
-        usleep(200 * 1000);
     }
     return NULL;
 }

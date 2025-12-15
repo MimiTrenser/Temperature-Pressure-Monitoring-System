@@ -1,14 +1,13 @@
-#include "pthread.h"
+#include <pthread.h>
 #include<stdio.h>
 #include<stdlib.h>
-#include<unistd.h>
 #include<sensor.h>
 
 
 
 int main(void)
 {
-    SensorSystem_Init();
+   // SensorSystem_Init();
     pthread_t pthread1;
     pthread_t pthread2;
 

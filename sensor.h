@@ -12,25 +12,34 @@ typedef enum
     PARAM_CONFIG_VERSION
 } ParamId_t;
 
-// union to hold either integer or small string 
-typedef union
-{
-    char   Value;              // temperature / pressure//??????
-    char  strValue[STR_LEN];   // config version e.g. "1234"
-} Values;
-
-// global polled structure
 typedef struct
 {
     ParamId_t Param;       // which parameter
-    Values   Value;         // value
-    uint32_t  Timestamp;   // each time updates param value time is notted
+    uint32_t PollInterval_ms;
+    int (read_fn*)(void);
+    uint64_t lastpoll_time;
+} PollingConfig_t;
 
-    char   LowerThreshold;
-    char   UpperThreshold;
-} GlobalPolledValue_t;
+typedef struct
+{
+    ParamId_t Param;
+    uint32_t processInterval_ms;
+    uint32_t mini_threshold;
+    uint64_t max_threshold;
+    uint32_t samplingtime;
+    uint64_t violationtime;
+}ProcessConfig_t;
 
-void SensorSystem_Init(void);
+typedef struct
+{
+    uint32_t Temperature;
+    uint32_t pressure;
+}SensorResult;
+extern SensorResult GetSensorResult;
+
+
+
+//void SensorSystem_Init(void);
 void SetPolledValue(ParamId_t id, const GlobalPolledValue_t *data);
 GlobalPolledValue_t GetPolledValue(ParamId_t id);
 
